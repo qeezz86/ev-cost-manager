@@ -744,7 +744,29 @@ export default function App() {
           </div>
         </div>
 
-        <div className="card">
+
+        <div className="stats-grid">
+          <StatCard title="전기충전 비용" value={formatCurrency(totals.chargingCost)} sub={`총 ${formatNumber(totals.chargingKwh)} kWh`} />
+          <StatCard title="세차 비용" value={formatCurrency(totals.washCost)} sub={`${data.wash.length}건`} />
+          <StatCard title="소모품 비용" value={formatCurrency(totals.consumablesCost)} sub={`${data.consumables.length}건`} />
+          <StatCard title="정비 비용" value={formatCurrency(totals.maintenanceCost)} sub={`${data.maintenance.length}건`} />
+        </div>
+
+        <div className="tabs">
+          <button className={activeTab === "charging" ? "tab active" : "tab"} onClick={() => setActiveTab("charging")}>전기충전</button>
+          <button className={activeTab === "wash" ? "tab active" : "tab"} onClick={() => setActiveTab("wash")}>세차</button>
+          <button className={activeTab === "consumables" ? "tab active" : "tab"} onClick={() => setActiveTab("consumables")}>소모품 관리</button>
+          <button className={activeTab === "maintenance" ? "tab active" : "tab"} onClick={() => setActiveTab("maintenance")}>정비</button>
+          <button className={activeTab === "stats" ? "tab active" : "tab"} onClick={() => setActiveTab("stats")}>통계</button>
+        </div>
+
+        {activeTab === "charging" && renderCharging()}
+        {activeTab === "wash" && renderWash()}
+        {activeTab === "consumables" && renderConsumables()}
+        {activeTab === "maintenance" && renderMaintenance()}
+        {activeTab === "stats" && renderStats()}
+		
+		<div className="card">
           <div className="backup-header">
             <div>
               <h3 style={{ marginTop: 0 }}>백업 및 아이폰 사용</h3>
@@ -783,27 +805,7 @@ export default function App() {
 
           {statusMessage ? <div className="status">{statusMessage}</div> : null}
         </div>
-
-        <div className="stats-grid">
-          <StatCard title="전기충전 비용" value={formatCurrency(totals.chargingCost)} sub={`총 ${formatNumber(totals.chargingKwh)} kWh`} />
-          <StatCard title="세차 비용" value={formatCurrency(totals.washCost)} sub={`${data.wash.length}건`} />
-          <StatCard title="소모품 비용" value={formatCurrency(totals.consumablesCost)} sub={`${data.consumables.length}건`} />
-          <StatCard title="정비 비용" value={formatCurrency(totals.maintenanceCost)} sub={`${data.maintenance.length}건`} />
-        </div>
-
-        <div className="tabs">
-          <button className={activeTab === "charging" ? "tab active" : "tab"} onClick={() => setActiveTab("charging")}>전기충전</button>
-          <button className={activeTab === "wash" ? "tab active" : "tab"} onClick={() => setActiveTab("wash")}>세차</button>
-          <button className={activeTab === "consumables" ? "tab active" : "tab"} onClick={() => setActiveTab("consumables")}>소모품 관리</button>
-          <button className={activeTab === "maintenance" ? "tab active" : "tab"} onClick={() => setActiveTab("maintenance")}>정비</button>
-          <button className={activeTab === "stats" ? "tab active" : "tab"} onClick={() => setActiveTab("stats")}>통계</button>
-        </div>
-
-        {activeTab === "charging" && renderCharging()}
-        {activeTab === "wash" && renderWash()}
-        {activeTab === "consumables" && renderConsumables()}
-        {activeTab === "maintenance" && renderMaintenance()}
-        {activeTab === "stats" && renderStats()}
+		
       </div>
     </div>
   );
