@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "ev-cost-manager-data-v2";
+const APP_VERSION = "Version 1.1";
 
 const initialData = {
   charging: [
@@ -71,6 +72,14 @@ function sortByDateDesc(items) {
     const orderB = Number(b.createdAt || 0);
     return orderB - orderA;
   });
+}
+
+function getUniqueBrands(items) {
+  return [...new Set(
+    (items || [])
+      .map((item) => String(item.brand || "").trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, "ko"));
 }
 
 function createEmptyStatsBucket(label) {
@@ -155,6 +164,7 @@ export default function App() {
   const [selectedStatsYear, setSelectedStatsYear] = useState("all");
   const [statusMessage, setStatusMessage] = useState("");
   const [isStandalone, setIsStandalone] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const fileInputRef = useRef(null);
 
   const [chargingForm, setChargingForm] = useState({
@@ -341,6 +351,7 @@ export default function App() {
   }, [yearlyStats, currentYearKey]);
 
   const sortedCharging = useMemo(() => sortByDateDesc(data.charging), [data.charging]);
+  const chargingBrandOptions = useMemo(() => getUniqueBrands(data.charging), [data.charging]);
   const sortedWash = useMemo(() => sortByDateDesc(data.wash), [data.wash]);
   const sortedConsumables = useMemo(() => sortByDateDesc(data.consumables), [data.consumables]);
   const sortedMaintenance = useMemo(() => sortByDateDesc(data.maintenance), [data.maintenance]);
@@ -360,6 +371,21 @@ export default function App() {
       ...prev,
       [section]: prev[section].filter((item) => item.id !== id),
     }));
+  };
+
+  const requestDeleteItem = (section, id, label) => {
+    setDeleteTarget({ section, id, label });
+  };
+
+  const confirmDeleteItem = () => {
+    if (!deleteTarget) return;
+    removeItem(deleteTarget.section, deleteTarget.id);
+    setStatusMessage(`${deleteTarget.label} 내역을 삭제했습니다.`);
+    setDeleteTarget(null);
+  };
+
+  const cancelDeleteItem = () => {
+    setDeleteTarget(null);
   };
 
   const exportJsonBackup = () => {
@@ -404,15 +430,16 @@ export default function App() {
   };
 
   const submitCharging = () => {
-    if (!chargingForm.date || !chargingForm.cost || !chargingForm.kwh || !chargingForm.brand) return;
+    const trimmedBrand = chargingForm.brand.trim();
+    if (!chargingForm.date || !chargingForm.cost || !chargingForm.kwh || !trimmedBrand) return;
 
     addItem("charging", {
       date: chargingForm.date,
       cost: Number(chargingForm.cost),
       kwh: Number(chargingForm.kwh),
-      brand: chargingForm.brand,
+      brand: trimmedBrand,
       speed: chargingForm.speed,
-      note: chargingForm.note,
+      note: chargingForm.note.trim(),
     });
 
     setChargingForm({
@@ -468,8 +495,45 @@ export default function App() {
           <input type="date" value={chargingForm.date} onChange={(e) => setChargingForm({ ...chargingForm, date: e.target.value })} />
           <input type="number" step="0.01" placeholder="충전 요금" value={chargingForm.cost} onChange={(e) => setChargingForm({ ...chargingForm, cost: e.target.value })} />
           <input type="number" step="0.001" placeholder="충전 kWh" value={chargingForm.kwh} onChange={(e) => setChargingForm({ ...chargingForm, kwh: e.target.value })} />
-          <input placeholder="충전 brand" value={chargingForm.brand} onChange={(e) => setChargingForm({ ...chargingForm, brand: e.target.value })} />
-          <input placeholder="충전 속도 (예: 고속, 저속)" value={chargingForm.speed} onChange={(e) => setChargingForm({ ...chargingForm, speed: e.target.value })} />
+
+          <div className="brand-row">
+            <input
+              placeholder="충전 brand 신규 입력"
+              value={chargingForm.brand}
+              onChange={(e) => setChargingForm({ ...chargingForm, brand: e.target.value })}
+            />
+            <select
+              value=""
+              onChange={(e) => {
+                if (!e.target.value) return;
+                setChargingForm({ ...chargingForm, brand: e.target.value });
+              }}
+            >
+              <option value="">기존 brand 선택</option>
+              {chargingBrandOptions.map((brand) => (
+                <option key={brand} value={brand}>
+                  {brand}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <div className="field-label">충전 속도</div>
+            <div className="choice-row">
+              {["고속", "저속"].map((speed) => (
+                <button
+                  key={speed}
+                  type="button"
+                  className={chargingForm.speed === speed ? "choice-btn active" : "choice-btn"}
+                  onClick={() => setChargingForm({ ...chargingForm, speed })}
+                >
+                  {speed}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <input placeholder="비고" value={chargingForm.note} onChange={(e) => setChargingForm({ ...chargingForm, note: e.target.value })} />
           <button className="primary-btn" onClick={submitCharging}>등록</button>
         </div>
@@ -494,7 +558,7 @@ export default function App() {
                   <div><span className="label">충전 속도</span><div>{item.speed || "-"}</div></div>
                   <div><span className="label">비고</span><div>{item.note || "-"}</div></div>
                 </div>
-                <button className="danger-btn" onClick={() => removeItem("charging", item.id)}>삭제</button>
+                <button className="danger-btn" onClick={() => requestDeleteItem("charging", item.id, "전기충전")}>삭제</button>
               </div>
             ))
           )}
@@ -526,7 +590,7 @@ export default function App() {
                   <div><span className="label">날짜</span><div>{item.date}</div></div>
                   <div><span className="label">요금</span><div>{formatCurrency(item.cost)}</div></div>
                 </div>
-                <button className="danger-btn" onClick={() => removeItem("wash", item.id)}>삭제</button>
+                <button className="danger-btn" onClick={() => requestDeleteItem("wash", item.id, "세차")}>삭제</button>
               </div>
             ))
           )}
@@ -560,7 +624,7 @@ export default function App() {
                   <div><span className="label">요금</span><div>{formatCurrency(item.cost)}</div></div>
                   <div><span className="label">내역</span><div>{item.item}</div></div>
                 </div>
-                <button className="danger-btn" onClick={() => removeItem("consumables", item.id)}>삭제</button>
+                <button className="danger-btn" onClick={() => requestDeleteItem("consumables", item.id, "소모품")}>삭제</button>
               </div>
             ))
           )}
@@ -594,7 +658,7 @@ export default function App() {
                   <div><span className="label">요금</span><div>{formatCurrency(item.cost)}</div></div>
                   <div><span className="label">내역</span><div>{item.item}</div></div>
                 </div>
-                <button className="danger-btn" onClick={() => removeItem("maintenance", item.id)}>삭제</button>
+                <button className="danger-btn" onClick={() => requestDeleteItem("maintenance", item.id, "정비")}>삭제</button>
               </div>
             ))
           )}
@@ -805,7 +869,21 @@ export default function App() {
 
           {statusMessage ? <div className="status">{statusMessage}</div> : null}
         </div>
-		
+
+        <div className="version-text">{APP_VERSION}</div>
+
+      {deleteTarget ? (
+        <div className="modal-overlay" onClick={cancelDeleteItem}>
+          <div className="confirm-modal card" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: 8 }}>삭제 확인</h3>
+            <div className="muted">선택한 {deleteTarget.label} 내역을 삭제할까요?</div>
+            <div className="modal-button-row">
+              <button className="secondary-btn" onClick={cancelDeleteItem}>취소</button>
+              <button className="danger-fill-btn" onClick={confirmDeleteItem}>삭제</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       </div>
     </div>
   );

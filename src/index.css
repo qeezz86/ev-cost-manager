@@ -197,7 +197,8 @@ thead {
 
 .primary-btn,
 .secondary-btn,
-.danger-btn {
+.danger-btn,
+.danger-fill-btn {
   padding: 12px 14px;
   border-radius: 12px;
   font-weight: 600;
@@ -355,6 +356,10 @@ thead {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .brand-row {
+    grid-template-columns: 1fr;
+  }
+
   .stats-grid,
   .info-grid,
   .item-grid-2,
@@ -370,5 +375,82 @@ thead {
   .grand-total,
   .stat-value {
     font-size: 24px;
+  }
+}
+
+.field-label {
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.brand-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 10px;
+}
+
+.choice-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.choice-btn {
+  height: 46px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  font-weight: 600;
+}
+
+.choice-btn.active {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+.version-text {
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
+}
+
+
+.danger-fill-btn {
+  background: #ef4444;
+  color: #fff;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.confirm-modal {
+  width: min(100%, 420px);
+}
+
+.modal-button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .modal-button-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }

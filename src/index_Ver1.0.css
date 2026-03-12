@@ -28,10 +28,30 @@ select {
 input,
 select {
   width: 100%;
+  min-width: 0;
+  height: 46px;
   padding: 12px 14px;
   border: 1px solid #d1d5db;
   border-radius: 12px;
   background: #fff;
+  color: #111827;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="date"] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.75;
 }
 
 button {
