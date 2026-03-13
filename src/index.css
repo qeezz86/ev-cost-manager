@@ -237,6 +237,47 @@ thead {
   justify-content: space-between;
 }
 
+.charging-item {
+  display: block;
+  cursor: pointer;
+}
+
+.charging-item.expanded {
+  background: #f8fafc;
+}
+
+.charging-summary-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compact-summary-grid {
+  flex: 1;
+}
+
+.expand-indicator {
+  min-width: 82px;
+  text-align: right;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.charging-detail-wrap {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+  display: grid;
+  gap: 14px;
+}
+
+.detail-action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .item-grid {
   display: grid;
   gap: 12px;
@@ -249,6 +290,10 @@ thead {
 
 .item-grid-3 {
   grid-template-columns: repeat(3, 1fr);
+}
+
+.item-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .item-grid-6 {
@@ -364,8 +409,18 @@ thead {
   .info-grid,
   .item-grid-2,
   .item-grid-3,
+  .item-grid-4,
   .item-grid-6 {
     grid-template-columns: 1fr;
+  }
+
+  .charging-summary-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .expand-indicator {
+    text-align: left;
   }
 
   .hero h1 {

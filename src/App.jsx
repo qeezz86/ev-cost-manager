@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "ev-cost-manager-data-v2";
-const APP_VERSION = "Version 1.1";
+const APP_VERSION = "Version 1.2";
 
 const initialData = {
   charging: [
@@ -41,13 +41,17 @@ const initialData = {
   ],
 };
 
-function formatCurrency(value) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "CNY",
-    maximumFractionDigits: 2,
-  }).format(Number(value || 0));
+//function formatCurrency(value) {
+  //return new Intl.NumberFormat("ko-KR", {
+  //  style: "currency",
+  // currency: "CNY",
+  //  maximumFractionDigits: 2,
+  //}).format(Number(value || 0));
+//}
+const formatCurrency = (value) => {
+  return `${Number(value).toFixed(2)}元`
 }
+
 
 function formatNumber(value) {
   return new Intl.NumberFormat("ko-KR", {
@@ -165,6 +169,7 @@ export default function App() {
   const [statusMessage, setStatusMessage] = useState("");
   const [isStandalone, setIsStandalone] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [expandedChargingIds, setExpandedChargingIds] = useState(() => new Set());
   const fileInputRef = useRef(null);
 
   const [chargingForm, setChargingForm] = useState({
@@ -356,6 +361,59 @@ export default function App() {
   const sortedConsumables = useMemo(() => sortByDateDesc(data.consumables), [data.consumables]);
   const sortedMaintenance = useMemo(() => sortByDateDesc(data.maintenance), [data.maintenance]);
 
+  const chargingBrandStats = useMemo(() => {
+    const buckets = {};
+
+    data.charging.forEach((item) => {
+      if (selectedStatsYear !== "all" && getYear(item.date) !== selectedStatsYear) return;
+
+      const brand = String(item.brand || "미분류").trim() || "미분류";
+      const speed = String(item.speed || "미분류").trim() || "미분류";
+      const key = `${brand}__${speed}`;
+
+      if (!buckets[key]) {
+        buckets[key] = {
+          key,
+          brand,
+          speed,
+          totalCost: 0,
+          totalKwh: 0,
+          count: 0,
+          averageUnitCost: 0,
+        };
+      }
+
+      buckets[key].totalCost += Number(item.cost || 0);
+      buckets[key].totalKwh += Number(item.kwh || 0);
+      buckets[key].count += 1;
+    });
+
+    return Object.values(buckets)
+      .map((item) => ({
+        ...item,
+        averageUnitCost: item.totalKwh > 0 ? item.totalCost / item.totalKwh : 0,
+      }))
+      .sort((a, b) => {
+        const brandCompare = a.brand.localeCompare(b.brand, "ko");
+        if (brandCompare !== 0) return brandCompare;
+        const speedOrder = { "고속": 0, "저속": 1, "미분류": 2 };
+        return (speedOrder[a.speed] ?? 9) - (speedOrder[b.speed] ?? 9);
+      });
+  }, [data.charging, selectedStatsYear]);
+
+
+  const toggleChargingItem = (id) => {
+    setExpandedChargingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
   const addItem = (section, item) => {
     setData((prev) => ({
       ...prev,
@@ -542,25 +600,61 @@ export default function App() {
       <div className="card">
         <SectionHeader
           title="전기충전 리스트"
-          description="날짜, 충전 요금, 충전 kWh, 충전 브랜드, 충전 속도, 비고를 기록합니다."
+          description="기본 화면에서는 날짜와 비고만 간단히 보고, 항목을 누르면 상세 정보가 펼쳐집니다."
         />
         <div className="list-wrap">
           {sortedCharging.length === 0 ? (
             <EmptyState text="등록된 전기충전 내역이 없습니다." />
           ) : (
-            sortedCharging.map((item) => (
-              <div className="list-item" key={item.id}>
-                <div className="item-grid item-grid-6">
-                  <div><span className="label">날짜</span><div>{item.date}</div></div>
-                  <div><span className="label">요금</span><div>{formatCurrency(item.cost)}</div></div>
-                  <div><span className="label">충전량</span><div>{formatNumber(item.kwh)} kWh</div></div>
-                  <div><span className="label">브랜드</span><div>{item.brand}</div></div>
-                  <div><span className="label">충전 속도</span><div>{item.speed || "-"}</div></div>
-                  <div><span className="label">비고</span><div>{item.note || "-"}</div></div>
+            sortedCharging.map((item) => {
+              const isExpanded = expandedChargingIds.has(item.id);
+
+              return (
+                <div
+                  className={isExpanded ? "list-item charging-item expanded" : "list-item charging-item"}
+                  key={item.id}
+                  onClick={() => toggleChargingItem(item.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleChargingItem(item.id);
+                    }
+                  }}
+                >
+                  <div className="charging-summary-row">
+                    <div className="item-grid item-grid-2 compact-summary-grid">
+                      <div><span className="label">날짜</span><div>{item.date}</div></div>
+                      <div><span className="label">비고</span><div>{item.note || "-"}</div></div>
+                    </div>
+                    <div className="expand-indicator">{isExpanded ? "접기 ▲" : "펼치기 ▼"}</div>
+                  </div>
+
+                  {isExpanded ? (
+                    <div className="charging-detail-wrap">
+                      <div className="item-grid item-grid-4">
+                        <div><span className="label">요금</span><div>{formatCurrency(item.cost)}</div></div>
+                        <div><span className="label">충전량</span><div>{formatNumber(item.kwh)} kWh</div></div>
+                        <div><span className="label">브랜드</span><div>{item.brand}</div></div>
+                        <div><span className="label">충전 속도</span><div>{item.speed || "-"}</div></div>
+                      </div>
+                      <div className="detail-action-row">
+                        <button
+                          className="danger-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestDeleteItem("charging", item.id, "전기충전");
+                          }}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-                <button className="danger-btn" onClick={() => requestDeleteItem("charging", item.id, "전기충전")}>삭제</button>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -775,6 +869,43 @@ export default function App() {
                     <td>{formatCurrency(row.consumablesCost)}</td>
                     <td>{formatCurrency(row.maintenanceCost)}</td>
                     <td>{formatCurrency(row.totalCost)}</td>
+                    <td>{row.count}건</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <SectionHeader
+          title="브랜드별 평균 단가"
+          description="선택한 연도 기준으로 브랜드별 고속·저속 충전의 평균 단가(요금 ÷ kWh)를 확인합니다."
+        />
+        {chargingBrandStats.length === 0 ? (
+          <EmptyState text="표시할 브랜드 통계 데이터가 없습니다." />
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>브랜드</th>
+                  <th>충전 속도</th>
+                  <th>총 요금</th>
+                  <th>총 충전량</th>
+                  <th>평균 단가</th>
+                  <th>건수</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chargingBrandStats.map((row) => (
+                  <tr key={row.key}>
+                    <td>{row.brand}</td>
+                    <td>{row.speed}</td>
+                    <td>{formatCurrency(row.totalCost)}</td>
+                    <td>{formatNumber(row.totalKwh)} kWh</td>
+                    <td>{formatCurrency(row.averageUnitCost)} /kWh</td>
                     <td>{row.count}건</td>
                   </tr>
                 ))}
